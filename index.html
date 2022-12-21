@@ -1,0 +1,123 @@
+<head>
+  <title>Simple Code Highlighter</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- CodeMirror for input. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.css" />
+
+  <!-- Picnic CSS for page layout. -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/picnic">
+
+  <!-- HighlightJS for output. -->
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/default.min.css">
+  <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+
+  <!-- FontAwesome for icons. -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
+
+
+  <!-- Custom styling. -->
+  <style>
+    main {
+      height: 100%;
+      padding: 1em;
+    }
+
+    .CodeMirror {
+      font-size: small;
+      outline: 1px solid #333
+    }
+
+    table {
+      line-height: 1;
+    }
+
+    table * {
+      background-color: transparent;
+    }
+
+    #code-copy {
+      cursor: pointer;
+    }
+
+    #code-output {
+      margin: 0;
+      padding: 0;
+      white-space: pre;
+      white-space: pre-wrap;
+      font-family: 'Courier New', Courier, monospace;
+    }
+
+    pre,
+    code {
+      padding: 0;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="">
+    <div class="flex two">
+      <div class="">
+        <h3>Paste your code here</h3>
+        <textarea id="code-input"></textarea>
+      </div>
+      <div class="">
+        <h3>
+          Copy formatted code ==>
+          <i id="code-copy" class="fa fa-clipboard"></i>
+        </h3>
+
+        <div id="code-wrapper" style="font-size:12px;">
+          <table
+            style="background-color:#eee;border:none;border-collapse:collapse;table-layout:fixed;width:100%;max-width:min(90ch,100%);">
+            <colgroup></colgroup>
+            <tbody style="display:block;overflow-x:auto;max-width:100%;">
+              <tr style="height:0;background-color: transparent;">
+                <td style="vertical-align:top;padding:4pt;">
+                  <code id="code-output"
+                    style="background-color:transparent;display:block;width:80ch;font-size:12px;"></code>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+</body>
+
+<script>
+  const codeInput = document.querySelector('#code-input');
+  const codeOutput = document.querySelector('#code-output');
+
+  const editor = CodeMirror.fromTextArea(
+    codeInput, { mode: 'auto', readOnly: false });
+
+  editor.on('change', () => {
+    codeOutput.innerHTML = '';
+    codeOutput.append(document.createTextNode(editor.getValue()));
+    hljs.highlightElement(codeOutput);
+
+    const selectElement = elem => {
+      const selection = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(elem);
+      selection.removeAllRanges();
+      selection.addRange(range);
+      return selection;
+    }
+
+    document.querySelector('#code-copy').addEventListener('click', () => {
+      const wrapper = document.querySelector('#code-wrapper');
+      const selection = selectElement(wrapper);
+      window.selection = selection;
+      try {
+        document.execCommand('copy');
+      } catch (exc) {
+        console.trace(exc);
+      }
+    });
+  });
+</script>
