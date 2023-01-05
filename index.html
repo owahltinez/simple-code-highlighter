@@ -4,79 +4,62 @@
 
   <!-- CodeMirror for input. -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.js"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.css" />
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/codemirror.min.css" />
 
-  <!-- Picnic CSS for page layout. -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/picnic">
+  <!-- Tailwind CSS for page layout. -->
+  <script src="https://cdn.tailwindcss.com"></script>
 
   <!-- HighlightJS for output. -->
   <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/default.min.css">
   <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
 
   <!-- FontAwesome for icons. -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
-
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" />
 
   <!-- Custom styling. -->
   <style>
-    main {
-      height: 100%;
-      padding: 1em;
-    }
-
     .CodeMirror {
-      font-size: small;
-      outline: 1px solid #333
-    }
-
-    table {
-      line-height: 1;
-    }
-
-    table * {
-      background-color: transparent;
-    }
-
-    #code-copy {
-      cursor: pointer;
-    }
-
-    #code-output {
-      margin: 0;
-      padding: 0;
-      white-space: pre;
-      white-space: pre-wrap;
-      font-family: 'Courier New', Courier, monospace;
-    }
-
-    pre,
-    code {
-      padding: 0;
+      outline: 1px solid #333;
     }
   </style>
 </head>
 
 <body>
-  <main class="">
-    <div class="flex two">
-      <div class="">
-        <h3>Paste your code here</h3>
+  <main class="h-fill p-2">
+    <div class="flex">
+
+      <!-- Where the code input goes. -->
+      <div class="block w-full md:w-1/2 p-1">
+        <h3 class="mb-1">Paste your code here
+          <select id="language" class="inline ml-4">
+            <option value="auto" selected>Language: auto</option>
+            <option value="python">python</option>
+            <option value="javascript">javascript</option>
+            <option value="html">html</option>
+            <option value="java">java</option>
+            <option value="css">css</option>
+          </select>
+        </h3>
         <textarea id="code-input"></textarea>
       </div>
-      <div class="">
-        <h3>
-          Copy formatted code ==>
-          <i id="code-copy" class="fa fa-clipboard"></i>
+
+      <!-- Where the code output goes. -->
+      <div class="block w-full md:w-1/2 p-1">
+        <h3 class="mb-1">
+          Copy formatted code <span>&#8594;</span>
+          <i id="code-copy" class="fa fa-clipboard cursor-pointer"></i>
         </h3>
 
+        <!-- All styles are inlined to ensure that copy-pasting preserves formatting. -->
         <div id="code-wrapper" style="font-size:12px;">
-          <table
+          <!-- height and line-height is not inlined, otherwise it does not look right in blogger. -->
+          <table class="leading-snug"
             style="background-color:#eee;border:none;border-collapse:collapse;table-layout:fixed;width:100%;max-width:min(90ch,100%);">
             <colgroup></colgroup>
             <tbody style="display:block;overflow-x:auto;max-width:100%;">
               <tr style="height:0;background-color: transparent;">
                 <td style="vertical-align:top;padding:4pt;">
-                  <code id="code-output"
+                  <code id="code-output" class="m-0 p-0 whitespace-pre-wrap font-monospace"
                     style="background-color:transparent;display:block;width:80ch;font-size:12px;"></code>
                 </td>
               </tr>
@@ -89,35 +72,64 @@
 </body>
 
 <script>
+  const language = document.querySelector('#language');
   const codeInput = document.querySelector('#code-input');
   const codeOutput = document.querySelector('#code-output');
 
+  // Restore the values from previous session.
+  const [lang, code] = [localStorage.getItem('lang'), localStorage.getItem('code')];
+  console.log([lang, code])
+  if (lang) document.querySelector(`option[value="${lang}"]`).selected = true;
+  if (code) codeInput.textContent = code;
+
+  // Create the input code editor.
   const editor = CodeMirror.fromTextArea(
-    codeInput, { mode: 'auto', readOnly: false });
+    codeInput, { mode: language.value, readOnly: false });
 
-  editor.on('change', () => {
+  // Updates and highlights the output code.
+  const updateOutput = () => {
     codeOutput.innerHTML = '';
-    codeOutput.append(document.createTextNode(editor.getValue()));
-    hljs.highlightElement(codeOutput);
-
-    const selectElement = elem => {
-      const selection = window.getSelection();
-      const range = document.createRange();
-      range.selectNodeContents(elem);
-      selection.removeAllRanges();
-      selection.addRange(range);
-      return selection;
+    const txt = editor.getValue();
+    if (language.value === 'auto') {
+      codeOutput.innerHTML = hljs.highlightAuto(txt).value;
+    } else {
+      codeOutput.innerHTML = hljs.highlight(txt, { language: language.value }).value;
     }
+    localStorage.setItem('code', txt);
+  };
 
-    document.querySelector('#code-copy').addEventListener('click', () => {
-      const wrapper = document.querySelector('#code-wrapper');
-      const selection = selectElement(wrapper);
-      window.selection = selection;
-      try {
-        document.execCommand('copy');
-      } catch (exc) {
-        console.trace(exc);
-      }
-    });
+  // Selects all the contents of an element.
+  const selectElement = elem => {
+    const selection = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(elem);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    return selection;
+  };
+
+  // Code input event listener.
+  editor.on('change', updateOutput);
+
+  // Language selector event listener.
+  language.addEventListener('change', () => {
+    editor.setOption('mode', language.value);
+    localStorage.setItem('lang', language.value);
+    updateOutput();
   });
+
+  // Code copy button event listener.
+  document.querySelector('#code-copy').addEventListener('click', () => {
+    const wrapper = document.querySelector('#code-wrapper');
+    const selection = selectElement(wrapper);
+    window.selection = selection;
+    try {
+      document.execCommand('copy');
+    } catch (exc) {
+      console.trace(exc);
+    }
+  });
+
+  // Trigger the first code change manually.
+  updateOutput();
 </script>
